@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador interactivo de biomoléculas</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{background:#0b1220;color:#e6edf7;font-family:Nunito,Inter,system-ui,sans-serif}
+.card{background:#131c2e;border:1px solid #243049;border-radius:14px}
+.nav.on{background:#1f2c47;color:#fff;box-shadow:inset 3px 0 0 var(--c,#5eead4)}
+button:focus-visible{outline:2px solid #5eead4;outline-offset:2px}
+.opt{transition:background .15s}
+</style>
+</head>
+<body class="min-h-screen md:flex">
+<aside class="md:w-60 md:min-h-screen bg-[#0e1626] border-b md:border-b-0 md:border-r border-[#243049] p-3 md:p-4 md:sticky md:top-0 md:h-screen">
+  <h1 class="font-extrabold text-lg leading-tight mb-3 hidden md:block">Simulador de biomoléculas</h1>
+  <nav class="flex md:flex-col gap-2 overflow-x-auto" id="nav"></nav>
+</aside>
+<main class="flex-1 p-4 md:p-8 max-w-4xl w-full mx-auto" id="app"></main>
+
+<script>
+const M={
+carb:{n:"Carbohidratos",ic:"🌾",c:"#fbbf24",
+def:"Biomoléculas formadas por carbono, hidrógeno y oxígeno, con fórmula general (CH₂O)n. Son la fuente de energía más inmediata de los seres vivos.",
+form:"C · H · O",unit:"Monosacárido (ej. glucosa)",chain:["Glucosa","Glucosa","Glucosa","Glucosa"],link:"enlace glucosídico",
+cap:"Los monosacáridos se unen por enlaces glucosídicos para formar disacáridos y polisacáridos.",
+tipos:[["Monosacáridos","Glucosa, fructosa, galactosa, ribosa."],["Disacáridos","Sacarosa (glucosa+fructosa), lactosa, maltosa."],["Polisacáridos","Almidón, glucógeno, celulosa, quitina."]],
+fun:["Energética: la glucosa se oxida para producir ATP","Reserva: almidón (plantas) y glucógeno (animales)","Estructural: celulosa y quitina","Reconocimiento celular (glucoproteínas)"],
+ej:["Pan, arroz, papa, fideos (almidón)","Frutas y miel (fructosa)","Leche (lactosa)","Celulosa en la pared celular vegetal","Glucógeno en hígado y músculos"]},
+lip:{n:"Lípidos",ic:"🫒",c:"#fb923c",
+def:"Compuestos orgánicos de textura oleosa o grasosa, formados sobre todo por C, H y O. No forman polímeros y no tienen un grupo funcional común: son hidrofóbicos (insolubles en agua, solubles en éter o acetona).",
+form:"C · H · O (a veces P y N)",unit:"Glicerol + ácidos grasos",chain:["Glicerol","Ác. graso","Ác. graso","Ác. graso"],link:"enlace éster",
+cap:"Un triglicérido: glicerol esterificado con tres ácidos grasos. Los lípidos no son polímeros verdaderos.",
+tipos:[["Saponificables: ácidos grasos","Saturados (solo enlaces simples: palmítico, esteárico) e insaturados (dobles enlaces: oleico, linoleico)."],["Saponificables: simples","Acilglicéridos (mono, di y triglicéridos) y ceras."],["Saponificables: complejos","Fosfolípidos y glucolípidos."],["Insaponificables","Terpenos, esteroides (colesterol, hormonas sexuales) y prostaglandinas."]],
+fun:["Reserva energética: 1 g de grasa aporta 9,4 kcal","Estructural: bicapa lipídica de la membrana celular","Reguladora: hormonas esteroideas (testosterona, estrógeno)","Impermeabilización y protección (ceras)"],
+ej:["Aceite de oliva, aguacate, frutos secos","Mantequilla, huevo, salmón (omega 3)","Fosfolípidos en la membrana plasmática","Cera de abejas, cera de hojas y plumas","Colesterol y vitamina D"]},
+pro:{n:"Proteínas",ic:"🥚",c:"#f472b6",
+def:"Las biomoléculas más abundantes y con mayor diversidad de funciones. Están hechas de C, H, O, N y a veces S. Son macromoléculas cuyas unidades son los aminoácidos, unidos por enlaces peptídicos.",
+form:"C · H · O · N (· S)",unit:"Aminoácido",chain:["Aa 1","Aa 2","Aa 3","Aa 4"],link:"enlace peptídico",
+cap:"Cada aminoácido tiene grupo amino (–NH₂), grupo carboxilo (–COOH), un H y una cadena R. Existen 20 aminoácidos; 10 son esenciales.",
+tipos:[["Simples","Formadas solo por aminoácidos."],["Globulares","Solubles; función catalizadora (enzimas)."],["Fibrosas","Insolubles; función estructural (queratina)."],["Conjugadas","Proteína + otra molécula: lipoproteínas, glicoproteínas, nucleoproteínas, metaloproteínas…"],["Niveles de estructura","Primaria (secuencia), secundaria (hélice), terciaria (plegamiento, puentes disulfuro), cuaternaria (varios polipéptidos)."]],
+fun:["Estructural (queratina, elastina)","Catalítica: las enzimas aceleran reacciones","Transporte (hemoglobina)","Defensa (inmunoglobulinas)","Regulación (insulina), contracción (actina, miosina), reserva (ovoalbúmina)"],
+ej:["Carne, pescado, huevos, lácteos","Legumbres, soya, quinua","Queratina en pelo, uñas y cuernos","Hemoglobina en la sangre","Seda de la telaraña"]},
+ac:{n:"Ácidos nucleicos",ic:"🧬",c:"#60a5fa",
+def:"Macromoléculas formadas por C, H, O, N y P. Sus monómeros son los nucleótidos, unidos por enlaces fosfodiéster. Contienen el material genético: ADN y ARN.",
+form:"C · H · O · N · P",unit:"Nucleótido",chain:["Fosfato·Pentosa·Base","Fosfato·Pentosa·Base","Fosfato·Pentosa·Base","Fosfato·Pentosa·Base"],link:"enlace fosfodiéster",
+cap:"Cada nucleótido tiene ácido fosfórico, una pentosa (ribosa o desoxirribosa) y una base nitrogenada (A, G, C, T o U).",
+tipos:[["ADN","Doble hélice antiparalela; bases A, T, C, G; A=T (2 puentes de H) y G≡C (3 puentes). Pentosa: desoxirribosa."],["ARN","Una sola cadena; reemplaza T por uracilo (U). Pentosa: ribosa. Tipos: mensajero, ribosomal y de transporte."]],
+fun:["Almacenar y transmitir la información genética","Replicación del ADN (semiconservativa)","Transcripción: ADN → ARNm","Traducción: ARNm → proteína, leyendo codones (AUG = inicio)"],
+ej:["ADN en cromosomas, mitocondrias y cloroplastos","ARN en ribosomas, nucléolo y citoplasma","Presentes en todos los alimentos de origen celular","Terapia génica: reemplazo de un gen defectuoso"]}
+};
+const Q=[
+["¿Qué elementos forman principalmente los carbohidratos?",["C, H, O","C, H, O, N","C, H, O, P","C, N, P, S"],0,"Los carbohidratos están formados por carbono, hidrógeno y oxígeno: (CH₂O)n."],
+["¿Cuál es la unidad básica (monómero) de las proteínas?",["Nucleótido","Aminoácido","Monosacárido","Ácido graso"],1,"Las proteínas son cadenas de aminoácidos."],
+["El enlace que une dos aminoácidos se llama:",["Glucosídico","Fosfodiéster","Peptídico","Éster"],2,"El enlace peptídico une el grupo amino de un aminoácido con el carboxilo de otro."],
+["Un nucleótido está formado por:",["Glicerol y ácidos grasos","Fosfato, pentosa y base nitrogenada","Grupo amino, carboxilo y radical R","Glucosa y fructosa"],1,"Ácido fosfórico + pentosa + base nitrogenada."],
+["¿Qué base nitrogenada está solo en el ARN?",["Timina","Adenina","Uracilo","Guanina"],2,"En el ARN el uracilo reemplaza a la timina."],
+["¿Cuántos puentes de hidrógeno forman G y C?",["Uno","Dos","Tres","Cuatro"],2,"G–C forma tres puentes de hidrógeno; A–T forma dos."],
+["Los lípidos son poco solubles en agua porque son:",["Polares","Hidrofílicos","Apolares (hidrofóbicos)","Iónicos"],2,"Son sustancias no polares, solubles en éter o acetona."],
+["¿Cuántas kilocalorías aporta 1 g de grasa según el texto?",["4,1","9,4","2,0","15"],1,"La grasa aporta 9,4 kcal/g; proteínas y glúcidos, 4,1 kcal/g."],
+["La celulosa es:",["Un polisacárido estructural de la pared vegetal","Un lípido de reserva","Una proteína fibrosa","Un ácido nucleico"],0,"Es un polisacárido formado por glucosas que da soporte a la pared celular."],
+["¿Cuál es el polisacárido de reserva en los animales?",["Almidón","Celulosa","Glucógeno","Quitina"],2,"El glucógeno se almacena en hígado y músculos; el almidón es de plantas."],
+["Una molécula anfipática tiene:",["Solo zona hidrófila","Solo zona hidrófoba","Una zona hidrófila y otra lipofílica","Carga neta positiva"],2,"Los ácidos grasos y fosfolípidos tienen cabeza hidrófila y cola hidrocarbonada."],
+["El colesterol pertenece al grupo de los:",["Triglicéridos","Esteroides","Ceras","Prostaglandinas"],1,"Es un esterol (esteroide) que estabiliza las membranas."],
+["Los puentes disulfuro participan en la estructura:",["Primaria","Secundaria","Terciaria","Ninguna"],2,"Intervienen en el plegamiento terciario (entre cisteínas)."],
+["En una reacción enzimática, ¿qué es el sustrato?",["La enzima misma","El compuesto sobre el cual actúa la enzima","El calor que se libera","Un cofactor metálico"],1,"El sustrato es el compuesto sobre el cual actúa una enzima; la enzima no se altera y puede volver a actuar."],
+["El codón AUG funciona como:",["Codón de paro","Codón de inicio","Base del ADN","Tipo de ARNt"],1,"AUG inicia la traducción."],
+["La transcripción consiste en:",["Copiar ADN en ADN","Pasar información de ADN a ARNm","Traducir ARNm a proteína","Plegar proteínas"],1,"El ADN transmite la información al ARN mensajero."],
+["La sacarosa es un disacárido formado por:",["Glucosa + glucosa","Glucosa + galactosa","Glucosa + fructosa","Fructosa + fructosa"],2,"Sacarosa = glucosa + fructosa."],
+["Los ácidos grasos saturados se caracterizan por:",["Dobles enlaces en la cadena","Solo enlaces simples entre carbonos","Tener nitrógeno","Ser polares"],1,"Ejemplos: mirístico, palmítico y esteárico."],
+["La hemoglobina cumple la función de:",["Reserva","Transporte de oxígeno","Defensa","Catálisis"],1,"Es una proteína transportadora con estructura cuaternaria."],
+["La replicación del ADN es semiconservativa porque cada molécula hija:",["Es totalmente nueva","Conserva una cadena de la molécula madre","Tiene una sola cadena","Contiene uracilo"],1,"Cada ADN hijo tiene una cadena original y una nueva."],
+["¿Cuántos aminoácidos son esenciales para el ser humano?",["Veinte","Diez","Cinco","Cuatro"],1,"De los 20 aminoácidos, 10 deben obtenerse de la dieta."],
+["Las ceras cumplen principalmente una función de:",["Impermeabilización y protección","Transporte","Catálisis","Almacenar información"],0,"Cubren plumas, pelo, hojas y frutos; son insolubles en agua."],
+["¿Qué ocurre con una enzima si la temperatura sube demasiado?",["Trabaja más rápido siempre","Se desnaturaliza","Se convierte en lípido","Se duplica"],1,"La desnaturalización destruye su forma y función."]
+];
+const F=[
+["Tu mejor amigo dice que come mucha grasa porque le gusta. Explícale por qué comer grasa en exceso no es bueno, pero tampoco conviene eliminarla por completo.","Menciona que la grasa es reserva de energía|Menciona una función útil de los lípidos (membrana celular, hormonas o protección)|Explica un riesgo del exceso para la salud"],
+["¿Por qué es importante comer proteínas durante la adolescencia? Da dos ejemplos de alimentos que las contengan.","Dice que las proteínas ayudan al crecimiento y reparación del cuerpo|Nombra al menos dos alimentos con proteínas|Menciona otra función (defensa, enzimas o transporte)"],
+["Si tuvieras que elegir entre aceite de oliva y mantequilla, ¿cuál escogerías y por qué?","Relaciona el aceite de oliva con grasas insaturadas|Explica que las insaturadas tienen dobles enlaces|Menciona el beneficio para el corazón"],
+["Te pareces mucho a tus padres. Explica con tus palabras qué molécula lo hace posible y cómo.","Nombra el ADN como material genético|Explica que se transmite de padres a hijos|Menciona genes o la información que se copia"],
+["Un jugador de fútbol come arroz o pasta la noche antes del partido. ¿Por qué lo hace?","Dice que los carbohidratos dan energía|Menciona la glucosa|Explica que el glucógeno se guarda en músculos e hígado"],
+["Imagina que tu cuerpo no tuviera enzimas. ¿Qué pasaría con las reacciones químicas de tus células?","Explica que las enzimas aceleran las reacciones|Dice que sin ellas las reacciones serían muy lentas|Da un ejemplo (amilasa, lactasa u otra)"],
+["Una compañera es vegetariana. ¿Qué debe tener en cuenta para no tener falta de proteínas?","Menciona los aminoácidos esenciales|Dice que debe combinar distintos alimentos vegetales|Da ejemplos de alimentos con proteínas"],
+["¿Por qué es peligroso exponerse a radiaciones o a sustancias tóxicas sin protección? Relaciónalo con el ADN.","Dice que el ADN guarda la información de la célula|Explica que la radiación puede dañar o alterar el ADN|Da una consecuencia para la salud"],
+["Las hojas, las plumas y la piel de los frutos no se mojan fácilmente. ¿Qué lípido lo explica y por qué?","Nombra las ceras|Dice que son insolubles en agua|Relaciona con protección o impermeabilidad"],
+["Explica con tus palabras cómo la información del ADN llega a convertirse en una proteína.","Menciona la transcripción (ADN a ARN mensajero)|Menciona la traducción (ARN a aminoácidos, en ribosomas)|Dice que el resultado es una proteína"]
+];
+const $=s=>document.querySelector(s),sh=a=>[...a].sort(()=>Math.random()-.5);
+const tabs=[["home","Inicio","🏠"],["exp","Explorador","🔬"],["quiz","Evaluación","📝"]];
+let tab="home",cur="carb",qz=null,passed=false;
+function nav(){$("#nav").innerHTML=tabs.map(t=>`<button class="nav shrink-0 text-left rounded-lg px-3 py-2 font-semibold ${t[0]==tab?'on':''}" data-t="${t[0]}">${t[2]} ${t[1]}</button>`).join("");
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()})}
+function render(){nav();({home,exp,quiz})[tab]();window.scrollTo(0,0)}
+function home(){$("#app").innerHTML=`<h2 class="text-3xl md:text-4xl font-extrabold mb-3">Las moléculas de la vida, en tus manos</h2>
+<p class="text-slate-300 mb-6 max-w-prose">Explora los cuatro grupos de biomoléculas orgánicas, ponte a prueba con un test que cambia en cada intento y supera el desafío final argumentativo.</p>
+<div class="grid sm:grid-cols-3 gap-3 mb-6">
+<div class="card p-4"><b>1. Explora</b><p class="text-sm text-slate-300 mt-1">Elige una biomolécula y revisa definición, estructura, tipos, funciones y ejemplos.</p></div>
+<div class="card p-4"><b>2. Evalúa</b><p class="text-sm text-slate-300 mt-1">10 preguntas al azar de un banco de ${Q.length}, con retroalimentación inmediata.</p></div>
+<div class="card p-4"><b>3. Argumenta</b><p class="text-sm text-slate-300 mt-1">Con 7 o más aciertos se desbloquea un caso de estudio de respuesta abierta.</p></div></div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">${Object.entries(M).map(([k,m])=>`<button class="card p-4 text-center hover:border-slate-400" data-go="${k}"><div class="text-3xl">${m.ic}</div><div class="font-bold mt-1" style="color:${m.c}">${m.n}</div></button>`).join("")}</div>
+<button id="go" class="bg-teal-400 text-slate-900 font-extrabold rounded-lg px-5 py-3">Empezar a explorar</button>`;
+$("#go").onclick=()=>{tab="exp";render()};document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{cur=b.dataset.go;tab="exp";render()})}
+function exp(){const m=M[cur],c=m.c;
+const list=a=>`<ul class="space-y-1.5">${a.map(x=>`<li class="flex gap-2"><span style="color:${c}">●</span><span>${x}</span></li>`).join("")}</ul>`;
+const chain=m.chain.map((u,i)=>`<div class="flex items-center">${i?`<div class="text-[10px] text-slate-400 px-1 text-center w-16">${m.link}</div>`:""}<div class="rounded-xl px-3 py-3 text-xs font-bold text-slate-900 text-center min-w-[72px]" style="background:${c}">${u}</div></div>`).join("");
+$("#app").innerHTML=`<div class="flex flex-wrap gap-2 mb-5">${Object.entries(M).map(([k,x])=>`<button data-k="${k}" class="rounded-full px-4 py-2 font-bold border ${k==cur?'text-slate-900':'text-slate-200 border-slate-600'}" style="${k==cur?`background:${x.c};border-color:${x.c}`:''}">${x.ic} ${x.n}</button>`).join("")}</div>
+<h2 class="text-3xl font-extrabold mb-4" style="color:${c}">${m.ic} ${m.n}</h2>
+<section class="card p-5 mb-4"><h3 class="font-extrabold mb-2">¿Qué son?</h3><p class="text-slate-300">${m.def}</p><p class="mt-3 text-sm">Composición: <b style="color:${c}">${m.form}</b></p></section>
+<section class="card p-5 mb-4"><h3 class="font-extrabold mb-1">Estructura química</h3><p class="text-sm text-slate-400 mb-3">Unidad básica: ${m.unit}</p>
+<div class="overflow-x-auto"><div class="flex items-center w-max py-2">${chain}</div></div><p class="text-sm text-slate-300 mt-3">${m.cap}</p></section>
+<section class="card p-5 mb-4"><h3 class="font-extrabold mb-3">Clasificación</h3><div class="grid sm:grid-cols-2 gap-3">${m.tipos.map(t=>`<div class="rounded-lg bg-[#0e1626] p-3 border-l-4" style="border-color:${c}"><b>${t[0]}</b><p class="text-sm text-slate-300">${t[1]}</p></div>`).join("")}</div></section>
+<div class="grid md:grid-cols-2 gap-4"><section class="card p-5"><h3 class="font-extrabold mb-3">Funciones biológicas</h3>${list(m.fun)}</section>
+<section class="card p-5"><h3 class="font-extrabold mb-3">Ejemplos prácticos</h3>${list(m.ej)}</section></div>`;
+document.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{cur=b.dataset.k;exp()})}
+function quiz(){if(!qz)return qIntro();if(qz.i>=10)return qEnd();qAsk()}
+function qIntro(){$("#app").innerHTML=`<h2 class="text-3xl font-extrabold mb-3">Evaluación dinámica</h2><p class="text-slate-300 mb-5 max-w-prose">Responderás 10 preguntas elegidas al azar de un banco de ${Q.length}. Si aciertas 7 o más, se desbloquea la pregunta de desafío final.</p><button id="st" class="bg-teal-400 text-slate-900 font-extrabold rounded-lg px-5 py-3">Iniciar test</button>`;
+$("#st").onclick=()=>{qz={qs:sh(Q).slice(0,10),i:0,s:0,done:false};quiz()}}
+function bar(){return `<div class="flex justify-between text-sm mb-1"><span>Pregunta ${Math.min(qz.i+1,10)}/10</span><span>Puntaje: <b>${qz.s}</b></span></div><div class="h-2 rounded bg-[#243049] mb-5"><div class="h-2 rounded bg-teal-400" style="width:${qz.i/10*100}%"></div></div>`}
+function qAsk(){const q=qz.qs[qz.i],o=sh(q[1].map((t,i)=>[t,i==q[2]]));qz.done=false;
+$("#app").innerHTML=bar()+`<div class="card p-5"><h3 class="text-xl font-extrabold mb-4">${q[0]}</h3><div class="space-y-2" id="os">${o.map((x,i)=>`<button class="opt w-full text-left rounded-lg border border-[#243049] bg-[#0e1626] px-4 py-3 hover:bg-[#1a2740]" data-i="${i}">${x[0]}</button>`).join("")}</div><div id="fb" class="mt-4"></div></div>`;
+document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{if(qz.done)return;qz.done=true;const ok=o[b.dataset.i][1];if(ok)qz.s++;
+document.querySelectorAll(".opt").forEach((x,i)=>{x.classList.remove("hover:bg-[#1a2740]");if(o[i][1])x.style.cssText="background:#064e3b;border-color:#34d399";});
+if(!ok)b.style.cssText="background:#7f1d1d;border-color:#f87171";
+$("#fb").innerHTML=`<p class="mb-3 ${ok?'text-emerald-300':'text-rose-300'}"><b>${ok?'¡Correcto!':'Incorrecto.'}</b> ${q[3]}</p><button id="nx" class="bg-teal-400 text-slate-900 font-extrabold rounded-lg px-5 py-2">${qz.i<9?'Siguiente':'Ver resultado'}</button>`;
+$("#nx").onclick=()=>{qz.i++;quiz()}})}
+function qEnd(){const ok=qz.s>=7;$("#app").innerHTML=bar()+`<div class="card p-6 text-center"><div class="text-5xl mb-2">${ok?'🏆':'📚'}</div><h2 class="text-2xl font-extrabold mb-2">Obtuviste ${qz.s} de 10</h2>
+<p class="text-slate-300 mb-5">${ok?'¡Desbloqueaste la Pregunta de Desafío Final!':'Necesitas 7 aciertos para desbloquear el desafío final. Repasa en el Explorador e inténtalo de nuevo.'}</p>
+<div class="flex gap-3 justify-center flex-wrap">${ok?'<button id="fn" class="bg-amber-400 text-slate-900 font-extrabold rounded-lg px-5 py-3">Ir al desafío final</button>':''}<button id="rt" class="border border-slate-500 rounded-lg px-5 py-3 font-bold">Reintentar con nuevas preguntas</button></div></div>`;
+$("#rt").onclick=()=>{qz={qs:sh(Q).slice(0,10),i:0,s:0,done:false};quiz()};if(ok)$("#fn").onclick=final}
+function final(){const f=F[Math.floor(Math.random()*F.length)],r=f[1].split("|");
+$("#app").innerHTML=`<div class="card p-5 border-amber-400/60"><h2 class="text-sm font-bold text-amber-300 mb-1">🔓 Desafío final</h2><h3 class="text-xl font-extrabold mb-4">${f[0]}</h3>
+<textarea id="ta" rows="8" class="w-full rounded-lg bg-[#0e1626] border border-[#243049] p-3 focus:outline-none focus:border-teal-400" placeholder="Escribe tu argumento con ejemplos y vocabulario científico…"></textarea>
+<div class="flex justify-between items-center mt-3 flex-wrap gap-2"><span id="wc" class="text-sm text-slate-400">0 palabras</span><button id="sv" class="bg-teal-400 text-slate-900 font-extrabold rounded-lg px-5 py-2">Guardar y ver rúbrica</button></div><div id="rb" class="mt-5"></div></div>`;
+$("#ta").oninput=e=>$("#wc").textContent=(e.target.value.trim().split(/\s+/).filter(Boolean).length)+" palabras";
+$("#sv").onclick=()=>{if($("#ta").value.trim().length<30){$("#rb").innerHTML='<p class="text-rose-300">Escribe al menos una respuesta breve (30 caracteres) antes de autoevaluarte.</p>';return}
+$("#ta").readOnly=true;$("#sv").remove();
+$("#rb").innerHTML=`<h4 class="font-extrabold mb-2">Rúbrica de autoevaluación</h4><p class="text-sm text-slate-400 mb-3">Marca los criterios que cumple tu respuesta:</p>${r.map(x=>`<label class="flex gap-2 mb-2"><input type="checkbox" class="ck mt-1 accent-teal-400"><span>${x}</span></label>`).join("")}<label class="flex gap-2 mb-2"><input type="checkbox" class="ck mt-1 accent-teal-400"><span>Uso vocabulario científico correcto y mi texto es claro</span></label><p id="sc" class="font-extrabold mt-3"></p>
+<button id="nw" class="mt-4 border border-slate-500 rounded-lg px-4 py-2 font-bold">Nuevo test</button>`;
+const up=()=>{const n=document.querySelectorAll(".ck:checked").length,t=r.length+1;$("#sc").textContent=`Autoevaluación: ${n}/${t} criterios`+(n==t?" — ¡Excelente!":n>=t-1?" — Muy bien":" — Revisa el Explorador y mejora tu argumento")};
+document.querySelectorAll(".ck").forEach(c=>c.onchange=up);up();$("#nw").onclick=()=>{qz=null;quiz()}}}
+render();
+</script>
+</body>
+</html>
